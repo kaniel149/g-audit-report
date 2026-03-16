@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>G System Audit — March 2026</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0a0f;--surface:#12121a;--surface2:#1a1a26;--border:#2a2a3a;
+--text:#e0e0e8;--text2:#8888a0;--accent:#6c5ce7;--accent2:#a29bfe;
+--green:#00b894;--red:#ff6b6b;--orange:#fdcb6e;--blue:#74b9ff;
+}
+@font-face{font-family:'Inter';src:local('Inter')}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);overflow:hidden;height:100vh;width:100vw}
+#progress{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s ease;z-index:100}
+#slide-counter{position:fixed;bottom:20px;right:20px;font-size:13px;color:var(--text2);z-index:100;font-variant-numeric:tabular-nums}
+.slide{position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:60px 80px;opacity:0;transform:translateX(60px);transition:all .5s cubic-bezier(.4,0,.2,1);pointer-events:none}
+.slide.active{opacity:1;transform:translateX(0);pointer-events:all}
+.slide.prev{opacity:0;transform:translateX(-60px)}
+.slide-inner{max-width:1100px;width:100%;direction:ltr}
+.slide-inner.rtl{direction:rtl}
+h1{font-size:3rem;font-weight:800;background:linear-gradient(135deg,var(--accent2),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px;line-height:1.2}
+h2{font-size:2rem;font-weight:700;color:var(--accent2);margin-bottom:20px}
+h3{font-size:1.3rem;font-weight:600;color:var(--blue);margin:16px 0 8px}
+p,.desc{font-size:1.05rem;color:var(--text2);line-height:1.7;margin-bottom:12px}
+.highlight{color:var(--accent2);font-weight:600}
+.tag{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.78rem;font-weight:600;margin:2px}
+.tag-green{background:rgba(0,184,148,.15);color:var(--green)}
+.tag-red{background:rgba(255,107,107,.15);color:var(--red)}
+.tag-orange{background:rgba(253,203,110,.15);color:var(--orange)}
+.tag-blue{background:rgba(116,185,255,.15);color:var(--blue)}
+.tag-purple{background:rgba(162,155,254,.15);color:var(--accent2)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin:8px 0}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:12px 0}
+.card-sm{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px}
+.card-sm h3{margin:0 0 6px;font-size:1rem}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.stat .num{font-size:2.4rem;font-weight:800;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.stat .label{font-size:.85rem;color:var(--text2);margin-top:4px}
+table{width:100%;border-collapse:collapse;margin:12px 0;font-size:.95rem}
+th{text-align:left;padding:10px 14px;background:var(--surface2);color:var(--accent2);font-weight:600;border-bottom:2px solid var(--border)}
+td{padding:10px 14px;border-bottom:1px solid var(--border)}
+tr:hover td{background:var(--surface)}
+.collapsible{cursor:pointer;user-select:none;display:flex;align-items:center;gap:8px}
+.collapsible::before{content:'▸';transition:transform .2s;font-size:.9rem;color:var(--accent2)}
+.collapsible.open::before{transform:rotate(90deg)}
+.collapse-content{max-height:0;overflow:hidden;transition:max-height .4s ease}
+.collapse-content.open{max-height:2000px}
+.skill-list{display:flex;flex-wrap:wrap;gap:5px;padding:10px 0}
+.skill{display:inline-block;padding:4px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:6px;font-size:.8rem;font-family:monospace;color:var(--text);transition:all .2s}
+.skill:hover{border-color:var(--accent);color:var(--accent2)}
+.rec-item{display:flex;gap:10px;margin:8px 0;align-items:flex-start}
+.rec-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;flex-shrink:0;margin-top:2px}
+.rec-good .rec-icon{background:rgba(0,184,148,.15);color:var(--green)}
+.rec-fix .rec-icon{background:rgba(255,107,107,.15);color:var(--red)}
+.rec-opt .rec-icon{background:rgba(253,203,110,.15);color:var(--orange)}
+.rec-new .rec-icon{background:rgba(116,185,255,.15);color:var(--blue)}
+.tier-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:700;margin-left:8px}
+.tier1{background:rgba(255,107,107,.15);color:var(--red)}
+.tier2{background:rgba(253,203,110,.15);color:var(--orange)}
+.tier3{background:rgba(116,185,255,.15);color:var(--blue)}
+.tier-new{background:rgba(0,184,148,.15);color:var(--green)}
+.nav-hint{position:fixed;bottom:20px;left:20px;color:var(--text2);font-size:.8rem;z-index:100}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:768px){
+.slide{padding:30px 20px}
+h1{font-size:2rem}
+h2{font-size:1.4rem}
+.stat-grid{grid-template-columns:repeat(2,1fr)}
+.two-col{grid-template-columns:1fr}
+}
+.emoji{font-style:normal}
+.timeline{position:relative;padding-left:24px;border-left:2px solid var(--border)}
+.timeline-item{position:relative;margin:12px 0;padding-left:16px}
+.timeline-item::before{content:'';position:absolute;left:-29px;top:6px;width:10px;height:10px;border-radius:50%;background:var(--accent)}
+.status-ok{color:var(--green)}
+.status-err{color:var(--red)}
+.logo-text{font-size:5rem;font-weight:900;background:linear-gradient(135deg,#6c5ce7,#a29bfe,#74b9ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:-3px}
+.subtitle{font-size:1.3rem;color:var(--text2);margin-top:8px}
+.divider{width:60px;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:2px;margin:16px 0}
+.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+</style>
+</head>
+<body>
+<div id="progress"></div>
+<div id="slide-counter"></div>
+<div class="nav-hint">← → Arrow keys to navigate</div>
+
+<!-- SLIDE 0: Title -->
+<div class="slide active" id="s0">
+<div class="slide-inner" style="text-align:center">
+<div class="logo-text">G</div>
+<div class="divider" style="margin:16px auto"></div>
+<h1 style="font-size:2.2rem">System Audit Report</h1>
+<p class="subtitle">KANIEL TORD LLC — March 2026</p>
+<p style="margin-top:30px;color:var(--text2);font-size:.95rem">
+OpenClaw Agent &bull; 155 Skills &bull; 14 Active Projects &bull; 24/7 Operations
+</p>
+<p style="margin-top:40px;font-size:.85rem;color:var(--border)">Press → to begin</p>
+</div>
+</div>
+
+<!-- SLIDE 1: System Overview -->
+<div class="slide" id="s1">
+<div class="slide-inner">
+<h2>System Overview</h2>
+<div class="divider"></div>
+<div class="stat-grid">
+<div class="stat"><div class="num">2026.3.13</div><div class="label">OpenClaw Version</div></div>
+<div class="stat"><div class="num">Opus 4</div><div class="label">claude-opus-4-6</div></div>
+<div class="stat"><div class="num">155</div><div class="label">Total Skills</div></div>
+<div class="stat"><div class="num">24/7</div><div class="label">Uptime Target</div></div>
+</div>
+<div class="card-grid">
+<div class="card-sm">
+<h3>Host</h3>
+<p>Mac Mini (Apple Silicon) — always on</p>
+<p style="font-family:monospace;font-size:.85rem;color:var(--text2)">~/.openclaw/workspace</p>
+</div>
+<div class="card-sm">
+<h3>Channels</h3>
+<p><span class="tag tag-purple">Discord</span> <span class="tag tag-blue">Telegram</span></p>
+<p style="font-size:.85rem;color:var(--text2)">Primary comms via Discord, Telegram as secondary</p>
+</div>
+<div class="card-sm">
+<h3>Identity</h3>
+<p><strong>G</strong> — AI operator for KANIEL TORD LLC</p>
+<p style="font-size:.85rem;color:var(--text2)">Hebrew comms, English code. Goal: $20K MRR</p>
+</div>
+<div class="card-sm">
+<h3>Local Servers</h3>
+<p style="font-family:monospace;font-size:.85rem">
+:8888 Dashboard<br>:8889 G-Board<br>:3777 OpenClaw UI
+</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 2: Architecture -->
+<div class="slide" id="s2">
+<div class="slide-inner">
+<h2>Architecture & Config</h2>
+<div class="divider"></div>
+<div class="two-col">
+<div>
+<div class="card">
+<h3>Core Workspace Files</h3>
+<table>
+<tr><td><code>SOUL.md</code></td><td>Personality & rules</td></tr>
+<tr><td><code>USER.md</code></td><td>Kaniel's profile & context</td></tr>
+<tr><td><code>AGENTS.md</code></td><td>Behavior protocols</td></tr>
+<tr><td><code>TOOLS.md</code></td><td>Local tool config</td></tr>
+<tr><td><code>IDENTITY.md</code></td><td>Name & creature type</td></tr>
+<tr><td><code>MEMORY.md</code></td><td>Long-term memory</td></tr>
+<tr><td><code>HEARTBEAT.md</code></td><td>Proactive check config</td></tr>
+</table>
+</div>
+</div>
+<div>
+<div class="card">
+<h3>Project & Data Files</h3>
+<table>
+<tr><td><code>PROJECT_STATUS.md</code></td><td>Active project tracker</td></tr>
+<tr><td><code>PROJECTS.md</code></td><td>Full project list</td></tr>
+<tr><td><code>PRINCIPLES.md</code></td><td>Decision framework</td></tr>
+<tr><td><code>ONBOARDING_GUIDE.md</code></td><td>New user guide</td></tr>
+<tr><td><code>memory/*.md</code></td><td>22 daily files (Feb-Mar)</td></tr>
+</table>
+</div>
+<div class="card" style="margin-top:12px">
+<h3>Lead & Content Files</h3>
+<table>
+<tr><td><code>mivne-pipeline-v2.md</code></td><td>Lead pipeline</td></tr>
+<tr><td><code>mivne-leads-enriched.md</code></td><td>Enriched leads</td></tr>
+<tr><td><code>kaniel-content-plan-7days.md</code></td><td>Content calendar</td></tr>
+<tr><td><code>VIDEO_PRODUCTION_PLAN.md</code></td><td>Video pipeline</td></tr>
+</table>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 3: Skills Overview -->
+<div class="slide" id="s3">
+<div class="slide-inner">
+<h2>Skills Inventory</h2>
+<div class="divider"></div>
+<div class="stat-grid">
+<div class="stat"><div class="num">102</div><div class="label">Workspace Skills</div></div>
+<div class="stat"><div class="num">53</div><div class="label">Global Skills</div></div>
+<div class="stat"><div class="num">155</div><div class="label">Total Installed</div></div>
+<div class="stat"><div class="num">7</div><div class="label">Categories</div></div>
+</div>
+<div class="card" style="text-align:center;margin-top:16px">
+<p style="font-size:1.1rem;color:var(--text)">Skill Distribution by Category</p>
+<div style="display:flex;height:36px;border-radius:8px;overflow:hidden;margin:16px 0;gap:2px">
+<div style="flex:30;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Marketing & Sales">30+</div>
+<div style="flex:16;background:#e17055;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Software Business">16</div>
+<div style="flex:13;background:var(--orange);color:#000;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Video & Audio">13</div>
+<div style="flex:8;background:var(--blue);color:#000;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Dev & DevOps">8</div>
+<div style="flex:7;background:var(--green);color:#000;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Design">7</div>
+<div style="flex:6;background:#fd79a8;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Research">6</div>
+<div style="flex:6;background:var(--text2);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700" title="Other">6</div>
+</div>
+<div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;font-size:.8rem;color:var(--text2)">
+<span><span style="color:var(--accent)">&#9632;</span> Marketing (30+)</span>
+<span><span style="color:#e17055">&#9632;</span> Software Biz (16)</span>
+<span><span style="color:var(--orange)">&#9632;</span> Video/Audio (13)</span>
+<span><span style="color:var(--blue)">&#9632;</span> Dev/DevOps (8)</span>
+<span><span style="color:var(--green)">&#9632;</span> Design (7)</span>
+<span><span style="color:#fd79a8">&#9632;</span> Research (6)</span>
+<span><span style="color:var(--text2)">&#9632;</span> Other (6)</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 4: Marketing Skills -->
+<div class="slide" id="s4">
+<div class="slide-inner">
+<h2>Marketing & Sales Skills <span class="tag tag-purple">30+</span></h2>
+<div class="divider"></div>
+<div class="two-col">
+<div>
+<div class="collapsible" onclick="toggle(this)"><strong>Ads Ecosystem (6)</strong></div>
+<div class="collapse-content">
+<div class="skill-list">
+<span class="skill">ads</span><span class="skill">ads-audit</span><span class="skill">ads-create</span><span class="skill">ads-optimize</span><span class="skill">ads-report</span><span class="skill">ads-strategy</span>
+</div>
+</div>
+<div class="collapsible" onclick="toggle(this)"><strong>SEO Suite (9)</strong></div>
+<div class="collapse-content">
+<div class="skill-list">
+<span class="skill">seo</span><span class="skill">seo-audit</span><span class="skill">seo-content</span><span class="skill">seo-keywords</span><span class="skill">seo-links</span><span class="skill">seo-local</span><span class="skill">seo-monitor</span><span class="skill">seo-technical</span><span class="skill">seo-competitor</span>
+</div>
+</div>
+<div class="collapsible" onclick="toggle(this)"><strong>Content & Copy (6)</strong></div>
+<div class="collapse-content">
+<div class="skill-list">
+<span class="skill">copywriting</span><span class="skill">direct-response-copy</span><span class="skill">content-idea-generator</span><span class="skill">automated-content-machine</span><span class="skill">social-content</span><span class="skill">matt-gray-video</span>
+</div>
+</div>
+</div>
+<div>
+<div class="collapsible" onclick="toggle(this)"><strong>Strategy & Positioning (5)</strong></div>
+<div class="collapse-content">
+<div class="skill-list">
+<span class="skill">agency</span><span class="skill">marketing-orchestrator</span><span class="skill">marketing-principles</span><span class="skill">positioning-angles</span><span class="skill">positioning-basics</span>
+</div>
+</div>
+<div class="collapsible" onclick="toggle(this)"><strong>Lead Gen & Outreach (5)</strong></div>
+<div class="collapse-content">
+<div class="skill-list">
+<span class="skill">lead-magnet</span><span class="skill">cold-outreach-sequence</span><span class="skill">linkedin-authority-builder</span><span class="skill">homepage-audit</span><span class="skill">ai-discoverability-audit</span>
+</div>
+</div>
+<div class="collapsible" onclick="toggle(this)"><strong>Revenue & Social (7)</strong></div>
+<div class="collapse-content">
+<div class="skill-list">
+<span class="skill">revenue-operations</span><span class="skill">revenue-tracker</span><span class="skill">saas-launch</span><span class="skill">social-intel</span><span class="skill">social-media-agent</span><span class="skill">testimonial-collector</span><span class="skill">customer-simulator</span>
+</div>
+</div>
+</div>
+</div>
+<div class="card" style="margin-top:12px;border-left:3px solid var(--accent)">
+<p style="font-size:.9rem"><strong>Agent:</strong> <span class="tag tag-purple">Tzvika</span> — Atomic Marketing agent with 9 techniques. Lives at <code>~/agents/tzvika/</code></p>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 5: Software Business Skills -->
+<div class="slide" id="s5">
+<div class="slide-inner">
+<h2>Software Business Skills <span class="tag tag-orange">16</span></h2>
+<div class="divider"></div>
+<p>Complete client lifecycle — from discovery to maintenance.</p>
+<div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+<div class="card-sm" style="border-left:3px solid var(--green)">
+<h3>Discovery</h3>
+<div class="skill-list"><span class="skill">02-discovery-question-generator</span><span class="skill">04-niche-opportunity-finder</span><span class="skill">17-niche-research</span></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<h3>Planning</h3>
+<div class="skill-list"><span class="skill">01-business-problem-to-blueprint</span><span class="skill">05-tech-stack-decision-maker</span><span class="skill">06-feature-prioritization-matrix</span><span class="skill">15-time-resource-estimator</span></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--accent)">
+<h3>Sales</h3>
+<div class="skill-list"><span class="skill">03-software-pricing-calculator</span><span class="skill">07-proposal-contract-generator</span><span class="skill">09-software-demonstration-script</span><span class="skill">12-competitor-analysis-positioning</span></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3>Delivery</h3>
+<div class="skill-list"><span class="skill">08-client-onboarding-workflow</span><span class="skill">13-bug-triage-prioritizer</span><span class="skill">16-10x-vision</span></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--red)">
+<h3>Growth</h3>
+<div class="skill-list"><span class="skill">10-maintenance-support-packages</span><span class="skill">14-upsell-opportunity-identifier</span><span class="skill">case-study-builder</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 6: Design & Video Skills -->
+<div class="slide" id="s6">
+<div class="slide-inner">
+<h2>Design, Video & Audio Skills</h2>
+<div class="divider"></div>
+<div class="two-col">
+<div>
+<div class="card">
+<h3>Design & Frontend <span class="tag tag-green">7</span></h3>
+<div class="skill-list">
+<span class="skill">design-agent</span><span class="skill">design-manager</span><span class="skill">frontend-design</span><span class="skill">motion</span><span class="skill">ui-ux-pro-max</span><span class="skill">presentation-architect</span><span class="skill">planning-with-files</span>
+</div>
+<p style="margin-top:10px;font-size:.85rem;color:var(--text2)">Full design pipeline from UX research to production-grade frontend code with motion design.</p>
+</div>
+</div>
+<div>
+<div class="card">
+<h3>Video & Audio <span class="tag tag-orange">13</span></h3>
+<div class="skill-list">
+<span class="skill">elevenlabs</span><span class="skill">ffmpeg</span><span class="skill">kinetic-video-creator</span><span class="skill">matt-gray-video</span><span class="skill">music-generator</span><span class="skill">remotion</span><span class="skill">remotion-best-practices</span><span class="skill">remotion-video-toolkit</span><span class="skill">speech-generator</span><span class="skill">voice-extractor</span><span class="skill">video-cog</span><span class="skill">video-creator</span><span class="skill">video-generator</span>
+</div>
+<p style="margin-top:10px;font-size:.85rem;color:var(--text2)">End-to-end video production: script → voiceover → kinetic text → final render.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 7: Dev & Research Skills -->
+<div class="slide" id="s7">
+<div class="slide-inner">
+<h2>Dev, DevOps & Research Skills</h2>
+<div class="divider"></div>
+<div class="two-col">
+<div>
+<div class="card">
+<h3>Dev & DevOps <span class="tag tag-blue">8</span></h3>
+<div class="skill-list">
+<span class="skill">antfarm</span><span class="skill">bird</span><span class="skill">calendar</span><span class="skill">github</span><span class="skill">gh-pages-deploy</span><span class="skill">log-analyzer</span><span class="skill">product-agent</span><span class="skill">qwen-edit</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2);margin-top:8px">Antfarm for multi-agent orchestration. GitHub for PR/issue management. Log analyzer for debugging production.</p>
+</div>
+<div class="card" style="margin-top:12px">
+<h3>Research & Data <span class="tag tag-green">6</span></h3>
+<div class="skill-list">
+<span class="skill">answeroverflow</span><span class="skill">bureaucracy-agent</span><span class="skill">gush-helka</span><span class="skill">summarize</span><span class="skill">youtube-downloader</span><span class="skill">youtube-uploader</span>
+</div>
+</div>
+</div>
+<div>
+<div class="card">
+<h3>Other / Utility <span class="tag tag-purple">6</span></h3>
+<div class="skill-list">
+<span class="skill">freeride</span><span class="skill">html-to-pptx</span><span class="skill">whoop-sync</span><span class="skill">workout</span><span class="skill">transcribe</span><span class="skill">playwright-recording</span>
+</div>
+</div>
+<div class="card" style="margin-top:12px">
+<h3>Orchestration</h3>
+<p style="font-size:.9rem"><strong>Antfarm</strong> — Multi-agent pipeline engine with specialized roles, retry/escalation, artifact passing, and metrics tracking.</p>
+<p style="font-size:.9rem;margin-top:8px"><strong>Coding Agent</strong> — Delegates to Codex, Claude Code, or Pi agents via background process for complex builds.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 8: Global Skills -->
+<div class="slide" id="s8">
+<div class="slide-inner">
+<h2>Global Skills <span class="tag tag-blue">53</span></h2>
+<div class="divider"></div>
+<p>Shared across all OpenClaw agents. Installed via ClawHub.</p>
+<div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(300px,1fr))">
+<div class="card-sm">
+<h3>Productivity & Notes</h3>
+<div class="skill-list">
+<span class="skill">1password</span><span class="skill">apple-notes</span><span class="skill">apple-reminders</span><span class="skill">bear-notes</span><span class="skill">notion</span><span class="skill">obsidian</span><span class="skill">things-mac</span><span class="skill">trello</span>
+</div>
+</div>
+<div class="card-sm">
+<h3>Communication</h3>
+<div class="skill-list">
+<span class="skill">discord</span><span class="skill">slack</span><span class="skill">himalaya</span><span class="skill">imsg</span><span class="skill">bluebubbles</span><span class="skill">wacli</span><span class="skill">voice-call</span>
+</div>
+</div>
+<div class="card-sm">
+<h3>Media & Content</h3>
+<div class="skill-list">
+<span class="skill">camsnap</span><span class="skill">canvas</span><span class="skill">gemini</span><span class="skill">gifgrep</span><span class="skill">nano-banana-pro</span><span class="skill">openai-image-gen</span><span class="skill">video-frames</span><span class="skill">sag</span><span class="skill">sherpa-onnx-tts</span>
+</div>
+</div>
+<div class="card-sm">
+<h3>Audio & Voice</h3>
+<div class="skill-list">
+<span class="skill">openai-whisper</span><span class="skill">openai-whisper-api</span><span class="skill">songsee</span><span class="skill">sonoscli</span><span class="skill">spotify-player</span>
+</div>
+</div>
+<div class="card-sm">
+<h3>Dev & System</h3>
+<div class="skill-list">
+<span class="skill">coding-agent</span><span class="skill">github</span><span class="skill">gh-issues</span><span class="skill">clawhub</span><span class="skill">skill-creator</span><span class="skill">tmux</span><span class="skill">peekaboo</span><span class="skill">node-connect</span><span class="skill">healthcheck</span>
+</div>
+</div>
+<div class="card-sm">
+<h3>Utilities & Tools</h3>
+<div class="skill-list">
+<span class="skill">blogwatcher</span><span class="skill">blucli</span><span class="skill">eightctl</span><span class="skill">gog</span><span class="skill">goplaces</span><span class="skill">mcporter</span><span class="skill">model-usage</span><span class="skill">nano-pdf</span><span class="skill">openhue</span><span class="skill">oracle</span><span class="skill">ordercli</span><span class="skill">session-logs</span><span class="skill">summarize</span><span class="skill">weather</span><span class="skill">xurl</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 9: Agents -->
+<div class="slide" id="s9">
+<div class="slide-inner">
+<h2>Agents</h2>
+<div class="divider"></div>
+<div class="two-col">
+<div>
+<div class="card" style="border-left:3px solid var(--green)">
+<h3 style="color:var(--green)">Tzvika <span class="tag tag-green">ACTIVE</span></h3>
+<p style="font-size:.9rem;margin:8px 0">Atomic Marketing Agent — 9 specialized marketing techniques</p>
+<p style="font-family:monospace;font-size:.85rem;color:var(--text2)">~/agents/tzvika/</p>
+<div style="margin-top:12px">
+<p style="font-size:.85rem;color:var(--text2)">Capabilities:</p>
+<ul style="font-size:.85rem;color:var(--text);padding-left:20px;line-height:2">
+<li>Market research & niche analysis</li>
+<li>Content strategy & creation</li>
+<li>Positioning & messaging</li>
+<li>Campaign planning & execution</li>
+<li>Performance tracking</li>
+</ul>
+</div>
+</div>
+</div>
+<div>
+<div class="card" style="border-left:3px solid var(--border);opacity:.7">
+<h3 style="color:var(--text2)">Build Council <span class="tag tag-orange">PLANNED</span></h3>
+<p style="font-size:.9rem;margin:8px 0;color:var(--text2)">Multi-agent development team (not yet active)</p>
+<div style="margin-top:12px">
+<div class="skill-list">
+<span class="skill" style="opacity:.6">Adi</span>
+<span class="skill" style="opacity:.6">Ben</span>
+<span class="skill" style="opacity:.6">Dana</span>
+<span class="skill" style="opacity:.6">Eli</span>
+<span class="skill" style="opacity:.6">Maya</span>
+<span class="skill" style="opacity:.6">Noa</span>
+<span class="skill" style="opacity:.6">Pixel</span>
+<span class="skill" style="opacity:.6">Rex</span>
+<span class="skill" style="opacity:.6">Ron</span>
+<span class="skill" style="opacity:.6">Solar</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2);margin-top:8px">10 specialized agents for development, design, QA, and deployment workflows.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 10: Cron Jobs -->
+<div class="slide" id="s10">
+<div class="slide-inner">
+<h2>Cron Jobs & Automation</h2>
+<div class="divider"></div>
+<div class="card">
+<table>
+<thead>
+<tr><th>Job</th><th>Schedule</th><th>Status</th><th>Notes</th></tr>
+</thead>
+<tbody>
+<tr>
+<td><code>solar-os-user-activity</code></td>
+<td>Every 1 hour</td>
+<td><span class="status-ok">&#9679; OK</span></td>
+<td>Tracks Solar OS user engagement</td>
+</tr>
+<tr>
+<td><code>morning-report</code></td>
+<td>7:00 AM Bangkok</td>
+<td><span class="status-err">&#9679; ERROR</span></td>
+<td style="color:var(--red)">Needs immediate fix</td>
+</tr>
+<tr>
+<td><code>creators-daily</code></td>
+<td>9:00 AM Bangkok</td>
+<td><span class="status-err">&#9679; ERROR</span></td>
+<td style="color:var(--red)">Needs immediate fix</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="card-grid" style="margin-top:16px">
+<div class="card-sm" style="border-left:3px solid var(--red)">
+<h3 style="color:var(--red)">Critical: 2/3 Cron Jobs Failing</h3>
+<p style="font-size:.9rem">The <code>morning-report</code> and <code>creators-daily</code> jobs are in ERROR state. This means:</p>
+<ul style="font-size:.85rem;padding-left:20px;line-height:2;color:var(--text2)">
+<li>No daily briefing delivered each morning</li>
+<li>Creator content pipeline is stalled</li>
+<li>Kaniel may be missing important updates</li>
+</ul>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--green)">
+<h3 style="color:var(--green)">Heartbeat System</h3>
+<p style="font-size:.9rem">Proactive checks running 2-4x daily:</p>
+<ul style="font-size:.85rem;padding-left:20px;line-height:2;color:var(--text2)">
+<li>Email inbox monitoring</li>
+<li>Calendar event reminders</li>
+<li>Social mention tracking</li>
+<li>Weather updates</li>
+<li>Memory maintenance</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 11: Active Projects -->
+<div class="slide" id="s11">
+<div class="slide-inner">
+<h2>Active Projects</h2>
+<div class="divider"></div>
+<div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))">
+<div class="card-sm" style="border-top:3px solid var(--red)">
+<h3>Tier 1 — Revenue <span class="tier-badge tier1">PRIORITY</span></h3>
+<div class="timeline">
+<div class="timeline-item"><strong>Mivne</strong><br><span style="font-size:.85rem;color:var(--text2)">Lead pipeline + enrichment active</span></div>
+<div class="timeline-item"><strong>Solaris Panama</strong><br><span style="font-size:.85rem;color:var(--text2)">Solar expansion project</span></div>
+<div class="timeline-item"><strong>Vibe Build</strong><br><span style="font-size:.85rem;color:var(--text2)">SaaS product development</span></div>
+<div class="timeline-item"><strong>Megged Academy</strong><br><span style="font-size:.85rem;color:var(--text2)">Educational platform</span></div>
+</div>
+</div>
+<div class="card-sm" style="border-top:3px solid var(--orange)">
+<h3>Tier 2 — Building <span class="tier-badge tier2">IN PROGRESS</span></h3>
+<div class="timeline">
+<div class="timeline-item"><strong>Solar OS USA</strong><br><span style="font-size:.85rem;color:var(--text2)">CRM for US solar market</span></div>
+<div class="timeline-item"><strong>Storage OS</strong><br><span style="font-size:.85rem;color:var(--text2)">Storage management SaaS</span></div>
+<div class="timeline-item"><strong>HealthOS</strong><br><span style="font-size:.85rem;color:var(--text2)">Health tracking platform</span></div>
+<div class="timeline-item"><strong>Yalla Venao</strong><br><span style="font-size:.85rem;color:var(--text2)">Regional venture</span></div>
+</div>
+</div>
+<div class="card-sm" style="border-top:3px solid var(--blue)">
+<h3>Tier 3 — Clients <span class="tier-badge tier3">ACTIVE</span></h3>
+<div class="timeline">
+<div class="timeline-item"><strong>Itay Grossman</strong></div>
+<div class="timeline-item"><strong>White Room</strong></div>
+<div class="timeline-item"><strong>Amitai</strong></div>
+</div>
+</div>
+<div class="card-sm" style="border-top:3px solid var(--green)">
+<h3>New <span class="tier-badge tier-new">EMERGING</span></h3>
+<div class="timeline">
+<div class="timeline-item"><strong>Koh Phangan Solar</strong><br><span style="font-size:.85rem;color:var(--text2)">Local solar opportunity</span></div>
+<div class="timeline-item"><strong>Solar Argentina</strong><br><span style="font-size:.85rem;color:var(--text2)">LATAM expansion</span></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 12: Memory System -->
+<div class="slide" id="s12">
+<div class="slide-inner">
+<h2>Memory & Continuity System</h2>
+<div class="divider"></div>
+<div class="two-col">
+<div>
+<div class="card">
+<h3>Memory Architecture</h3>
+<p style="font-size:.9rem">G wakes fresh each session. Continuity is file-based:</p>
+<table style="margin-top:12px">
+<tr><td><strong>MEMORY.md</strong></td><td>Long-term curated memory</td></tr>
+<tr><td><strong>memory/*.md</strong></td><td>22 daily raw logs (Feb 16 — Mar 16)</td></tr>
+<tr><td><strong>heartbeat-state.json</strong></td><td>Last check timestamps</td></tr>
+</table>
+<p style="font-size:.85rem;color:var(--text2);margin-top:12px">Daily files = raw journal. MEMORY.md = distilled wisdom. Periodic consolidation during heartbeats.</p>
+</div>
+</div>
+<div>
+<div class="card">
+<h3>Session Protocol</h3>
+<ol style="font-size:.9rem;padding-left:20px;line-height:2.2">
+<li>Read <code>SOUL.md</code> — identity</li>
+<li>Read <code>USER.md</code> — who to help</li>
+<li>Read <code>memory/today.md</code> + yesterday</li>
+<li>If main session → load <code>MEMORY.md</code></li>
+<li>Check <code>HEARTBEAT.md</code> for tasks</li>
+</ol>
+</div>
+<div class="card" style="margin-top:12px">
+<h3>Security Model</h3>
+<p style="font-size:.85rem;color:var(--text2)">MEMORY.md only in main sessions (never in group chats). No credential exposure. No force push. No spending. Preview before external messages.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 13: Workspace Files -->
+<div class="slide" id="s13">
+<div class="slide-inner">
+<h2>Workspace File Map</h2>
+<div class="divider"></div>
+<div class="card" style="font-family:monospace;font-size:.85rem;line-height:2">
+<pre style="color:var(--text);overflow-x:auto">
+~/.openclaw/workspace/
+├── <span style="color:var(--accent2)">SOUL.md</span>              # Who G is
+├── <span style="color:var(--accent2)">USER.md</span>              # Who Kaniel is
+├── <span style="color:var(--accent2)">AGENTS.md</span>            # Behavior protocols
+├── <span style="color:var(--accent2)">TOOLS.md</span>             # Local config & secrets ref
+├── <span style="color:var(--accent2)">IDENTITY.md</span>          # Name & type
+├── <span style="color:var(--accent2)">MEMORY.md</span>            # Long-term memory
+├── <span style="color:var(--accent2)">HEARTBEAT.md</span>         # Proactive check config
+├── <span style="color:var(--blue)">PROJECT_STATUS.md</span>    # Active projects tracker
+├── <span style="color:var(--blue)">PROJECTS.md</span>          # Full project list
+├── <span style="color:var(--blue)">PRINCIPLES.md</span>        # Decision framework
+├── <span style="color:var(--green)">ONBOARDING_GUIDE.md</span>  # New user guide
+├── <span style="color:var(--green)">QUICK_START.md</span>       # Quick reference
+├── <span style="color:var(--orange)">mivne-pipeline-v2.md</span> # Lead pipeline
+├── <span style="color:var(--orange)">mivne-leads-enriched.md</span>
+├── <span style="color:var(--orange)">kaniel-content-plan-7days.md</span>
+├── <span style="color:var(--orange)">VIDEO_PRODUCTION_PLAN.md</span>
+├── <span style="color:var(--orange)">ATOMIC_MARKETING_ANALYSIS.md</span>
+├── <span style="color:var(--orange)">founders-kit-actions.md</span>
+├── <span style="color:var(--text2)">memory/</span>
+│   ├── 2026-02-16.md ... 2026-03-16.md  <span style="color:var(--text2)">(22 files)</span>
+│   └── heartbeat-state.json
+└── <span style="color:var(--text2)">skills/</span>              <span style="color:var(--text2)">(102 skill directories)</span>
+</pre>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 14: Recommendations - What's Working -->
+<div class="slide" id="s14">
+<div class="slide-inner">
+<h2>Audit: What's Working Well</h2>
+<div class="divider"></div>
+<div class="card-grid">
+<div class="card-sm">
+<div class="rec-item rec-good"><div class="rec-icon">&#10003;</div><div>
+<strong>Comprehensive Skill Coverage</strong>
+<p style="font-size:.85rem;color:var(--text2)">155 skills covering marketing, dev, design, video, and operations. Few gaps in capability.</p>
+</div></div>
+</div>
+<div class="card-sm">
+<div class="rec-item rec-good"><div class="rec-icon">&#10003;</div><div>
+<strong>Memory System</strong>
+<p style="font-size:.85rem;color:var(--text2)">22 daily memory files + curated MEMORY.md provides solid continuity across sessions.</p>
+</div></div>
+</div>
+<div class="card-sm">
+<div class="rec-item rec-good"><div class="rec-icon">&#10003;</div><div>
+<strong>Marketing Stack Depth</strong>
+<p style="font-size:.85rem;color:var(--text2)">30+ marketing skills with full ads ecosystem, SEO suite, and content pipeline. Best-in-class for solo operator.</p>
+</div></div>
+</div>
+<div class="card-sm">
+<div class="rec-item rec-good"><div class="rec-icon">&#10003;</div><div>
+<strong>Software Business Lifecycle</strong>
+<p style="font-size:.85rem;color:var(--text2)">16 skills covering discovery → planning → sales → delivery → upsell. Complete client journey.</p>
+</div></div>
+</div>
+<div class="card-sm">
+<div class="rec-item rec-good"><div class="rec-icon">&#10003;</div><div>
+<strong>Security Model</strong>
+<p style="font-size:.85rem;color:var(--text2)">Strong guardrails: no force push, no spending, preview before external messages, memory isolation in group chats.</p>
+</div></div>
+</div>
+<div class="card-sm">
+<div class="rec-item rec-good"><div class="rec-icon">&#10003;</div><div>
+<strong>Heartbeat System</strong>
+<p style="font-size:.85rem;color:var(--text2)">Proactive monitoring 2-4x daily for email, calendar, mentions. Good balance of helpful vs. quiet.</p>
+</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 15: Recommendations - What Needs Fixing -->
+<div class="slide" id="s15">
+<div class="slide-inner">
+<h2>Audit: What Needs Fixing</h2>
+<div class="divider"></div>
+<div class="card" style="border-left:3px solid var(--red);margin-bottom:16px">
+<div class="rec-item rec-fix"><div class="rec-icon">!</div><div>
+<strong style="color:var(--red)">CRITICAL: 2/3 Cron Jobs in ERROR</strong>
+<p style="font-size:.9rem;margin:8px 0"><code>morning-report</code> (7:00 AM) and <code>creators-daily</code> (9:00 AM) are both failing.</p>
+<p style="font-size:.85rem;color:var(--text2)">Action: Debug immediately. Check <code>openclaw cron list</code> for error logs. These are daily-driver automations — without them, Kaniel starts each day blind.</p>
+</div></div>
+</div>
+<div class="card-grid">
+<div class="card-sm" style="border-left:3px solid var(--red)">
+<div class="rec-item rec-fix"><div class="rec-icon">!</div><div>
+<strong>Build Council Not Active</strong>
+<p style="font-size:.85rem;color:var(--text2)">10 planned agents (Adi, Ben, Dana...) still dormant. Either activate or remove to reduce clutter.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--red)">
+<div class="rec-item rec-fix"><div class="rec-icon">!</div><div>
+<strong>No Monitoring/Alerts</strong>
+<p style="font-size:.85rem;color:var(--text2)">When cron jobs fail, nobody gets notified. Need a meta-monitor for system health.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--red)">
+<div class="rec-item rec-fix"><div class="rec-icon">!</div><div>
+<strong>Memory Sprawl</strong>
+<p style="font-size:.85rem;color:var(--text2)">22 daily files may accumulate stale context. Need periodic cleanup/archival strategy.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--red)">
+<div class="rec-item rec-fix"><div class="rec-icon">!</div><div>
+<strong>14 Projects for Solo Dev</strong>
+<p style="font-size:.85rem;color:var(--text2)">Spread across 4 tiers. Risk of dilution. Consider hard prioritization — max 3-4 active.</p>
+</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 16: Recommendations - Redundancy -->
+<div class="slide" id="s16">
+<div class="slide-inner">
+<h2>Audit: Redundancy & Overlap</h2>
+<div class="divider"></div>
+<p>Several skill groups have significant overlap that could be consolidated:</p>
+<div class="card-grid" style="margin-top:16px">
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3 style="color:var(--orange)">Video Generation (5 overlapping)</h3>
+<div class="skill-list">
+<span class="skill">video-cog</span><span class="skill">video-creator</span><span class="skill">video-generator</span><span class="skill">kinetic-video-creator</span><span class="skill">remotion-video-toolkit</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2)">Recommend: Keep <code>remotion-video-toolkit</code> + <code>kinetic-video-creator</code>. Archive the rest.</p>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3 style="color:var(--orange)">Marketing Strategy (3 overlapping)</h3>
+<div class="skill-list">
+<span class="skill">agency</span><span class="skill">marketing-orchestrator</span><span class="skill">marketing-principles</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2)">Recommend: Merge <code>marketing-principles</code> into <code>marketing-orchestrator</code>. Keep <code>agency</code> for full-funnel.</p>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3 style="color:var(--orange)">Positioning (2 overlapping)</h3>
+<div class="skill-list">
+<span class="skill">positioning-angles</span><span class="skill">positioning-basics</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2)">Recommend: Merge into single <code>positioning</code> skill.</p>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3 style="color:var(--orange)">Copywriting (2 overlapping)</h3>
+<div class="skill-list">
+<span class="skill">copywriting</span><span class="skill">direct-response-copy</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2)">Recommend: Merge — DR copy is a subset of copywriting.</p>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3 style="color:var(--orange)">GitHub (duplicated)</h3>
+<div class="skill-list">
+<span class="skill">github (workspace)</span><span class="skill">github (global)</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2)">Recommend: Remove workspace copy, use global only.</p>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--orange)">
+<h3 style="color:var(--orange)">Summarize (duplicated)</h3>
+<div class="skill-list">
+<span class="skill">summarize (workspace)</span><span class="skill">summarize (global)</span>
+</div>
+<p style="font-size:.85rem;color:var(--text2)">Recommend: Remove workspace copy, use global only.</p>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 17: Optimization Suggestions -->
+<div class="slide" id="s17">
+<div class="slide-inner">
+<h2>Optimization Suggestions</h2>
+<div class="divider"></div>
+<div class="card-grid">
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<div class="rec-item rec-new"><div class="rec-icon">+</div><div>
+<strong>Add System Health Monitoring</strong>
+<p style="font-size:.85rem;color:var(--text2)">Create a cron job that checks other cron jobs' health and alerts via Discord when failures occur. Use <code>healthcheck</code> skill.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<div class="rec-item rec-new"><div class="rec-icon">+</div><div>
+<strong>Memory Archival Cron</strong>
+<p style="font-size:.85rem;color:var(--text2)">Weekly job to consolidate memory files older than 14 days into MEMORY.md, then archive daily files.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<div class="rec-item rec-new"><div class="rec-icon">+</div><div>
+<strong>Skill Dependency Audit</strong>
+<p style="font-size:.85rem;color:var(--text2)">Run <code>openclaw skills check</code> to identify broken/outdated skills. Clean unused ones to reduce context size.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<div class="rec-item rec-new"><div class="rec-icon">+</div><div>
+<strong>Project Focus Mode</strong>
+<p style="font-size:.85rem;color:var(--text2)">Reduce active projects from 14 to 4-5 max. Use PROJECT_STATUS.md tiers strictly — park Tier 2/3 work.</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<div class="rec-item rec-new"><div class="rec-icon">+</div><div>
+<strong>ClawHub Skills to Install</strong>
+<p style="font-size:.85rem;color:var(--text2)">Consider: <code>stripe</code> (payment tracking), <code>analytics</code> (web analytics), <code>crm</code> (lead management), <code>invoicing</code> (billing automation).</p>
+</div></div>
+</div>
+<div class="card-sm" style="border-left:3px solid var(--blue)">
+<div class="rec-item rec-new"><div class="rec-icon">+</div><div>
+<strong>Automate Lead Pipeline</strong>
+<p style="font-size:.85rem;color:var(--text2)">Connect Mivne lead enrichment to automated outreach via <code>cold-outreach-sequence</code> + <code>himalaya</code>. Trigger from cron.</p>
+</div></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 18: Workflows to Automate -->
+<div class="slide" id="s18">
+<div class="slide-inner">
+<h2>Workflows to Automate</h2>
+<div class="divider"></div>
+<div class="card-grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+<div class="card-sm">
+<h3>Daily Morning Pipeline</h3>
+<p style="font-size:.85rem;color:var(--text2);line-height:1.8">
+1. Check email inbox (himalaya)<br>
+2. Review calendar (gog/calendar)<br>
+3. Check project git statuses<br>
+4. Generate morning briefing<br>
+5. Deliver to Discord channel
+</p>
+<span class="tag tag-red">Currently broken</span>
+</div>
+<div class="card-sm">
+<h3>Content Pipeline</h3>
+<p style="font-size:.85rem;color:var(--text2);line-height:1.8">
+1. Generate content ideas (content-idea-generator)<br>
+2. Write copy (copywriting/direct-response-copy)<br>
+3. Create visuals (frontend-design)<br>
+4. Generate video (remotion)<br>
+5. Schedule posts (social-media-agent)
+</p>
+<span class="tag tag-orange">Partially manual</span>
+</div>
+<div class="card-sm">
+<h3>Lead Nurture Pipeline</h3>
+<p style="font-size:.85rem;color:var(--text2);line-height:1.8">
+1. Enrich leads (mivne enrichment)<br>
+2. Score & prioritize<br>
+3. Generate personalized outreach<br>
+4. Send via email (himalaya)<br>
+5. Track responses & follow up
+</p>
+<span class="tag tag-blue">Could automate</span>
+</div>
+<div class="card-sm">
+<h3>Client Delivery Pipeline</h3>
+<p style="font-size:.85rem;color:var(--text2);line-height:1.8">
+1. Onboard (client-onboarding-workflow)<br>
+2. Build (coding-agent + antfarm)<br>
+3. Demo (software-demonstration-script)<br>
+4. Deploy (gh-pages-deploy)<br>
+5. Maintain (maintenance-support-packages)
+</p>
+<span class="tag tag-green">Skills ready</span>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 19: Score Card -->
+<div class="slide" id="s19">
+<div class="slide-inner">
+<h2>System Health Score</h2>
+<div class="divider"></div>
+<div class="stat-grid">
+<div class="stat" style="border:2px solid var(--green)"><div class="num" style="background:var(--green);-webkit-background-clip:text">A</div><div class="label">Skills Coverage</div></div>
+<div class="stat" style="border:2px solid var(--green)"><div class="num" style="background:var(--green);-webkit-background-clip:text">A</div><div class="label">Security Model</div></div>
+<div class="stat" style="border:2px solid var(--red)"><div class="num" style="background:var(--red);-webkit-background-clip:text">D</div><div class="label">Cron Reliability</div></div>
+<div class="stat" style="border:2px solid var(--orange)"><div class="num" style="background:var(--orange);-webkit-background-clip:text">C+</div><div class="label">Focus & Priority</div></div>
+</div>
+<div class="card-grid" style="margin-top:16px">
+<div class="card-sm">
+<h3>Overall Grade: <span style="color:var(--orange)">B</span></h3>
+<p style="font-size:.9rem">Powerful system with excellent skill coverage and security. Held back by broken automations and project sprawl.</p>
+</div>
+<div class="card-sm">
+<h3>Top 3 Actions</h3>
+<ol style="font-size:.9rem;padding-left:20px;line-height:2.2">
+<li style="color:var(--red)"><strong>Fix the 2 broken cron jobs</strong> — immediate</li>
+<li style="color:var(--orange)"><strong>Consolidate redundant skills</strong> — this week</li>
+<li style="color:var(--blue)"><strong>Add system health monitoring</strong> — this week</li>
+</ol>
+</div>
+</div>
+</div>
+</div>
+
+<!-- SLIDE 20: End -->
+<div class="slide" id="s20">
+<div class="slide-inner" style="text-align:center">
+<div class="logo-text" style="font-size:4rem">G</div>
+<div class="divider" style="margin:16px auto"></div>
+<h2 style="color:var(--text)">Audit Complete</h2>
+<p class="subtitle" style="margin-top:12px">KANIEL TORD LLC — March 16, 2026</p>
+<div style="margin-top:40px">
+<div class="stat-grid" style="max-width:600px;margin:0 auto">
+<div class="stat"><div class="num" style="font-size:1.6rem">155</div><div class="label">Skills</div></div>
+<div class="stat"><div class="num" style="font-size:1.6rem">14</div><div class="label">Projects</div></div>
+<div class="stat"><div class="num" style="font-size:1.6rem">1</div><div class="label">Agent Active</div></div>
+<div class="stat"><div class="num" style="font-size:1.6rem">B</div><div class="label">Health Grade</div></div>
+</div>
+</div>
+<p style="margin-top:40px;font-size:.85rem;color:var(--border)">Built by G — Powered by OpenClaw</p>
+</div>
+</div>
+
+<script>
+const slides=document.querySelectorAll('.slide');
+const total=slides.length;
+let current=0;
+const progress=document.getElementById('progress');
+const counter=document.getElementById('slide-counter');
+
+function update(){
+slides.forEach((s,i)=>{
+s.classList.remove('active','prev');
+if(i===current)s.classList.add('active');
+else if(i<current)s.classList.add('prev');
+});
+progress.style.width=((current/(total-1))*100)+'%';
+counter.textContent=`${current+1} / ${total}`;
+}
+
+function next(){if(current<total-1){current++;update()}}
+function prev(){if(current>0){current--;update()}}
+
+document.addEventListener('keydown',e=>{
+if(e.key==='ArrowRight'||e.key===' '||e.key==='Enter')next();
+if(e.key==='ArrowLeft'||e.key==='Backspace')prev();
+});
+
+let touchX=0;
+document.addEventListener('touchstart',e=>touchX=e.touches[0].clientX);
+document.addEventListener('touchend',e=>{
+const diff=e.changedTouches[0].clientX-touchX;
+if(diff<-50)next();
+if(diff>50)prev();
+});
+
+document.querySelectorAll('.collapsible').forEach(el=>{
+el.addEventListener('click',()=>{
+el.classList.toggle('open');
+el.nextElementSibling.classList.toggle('open');
+});
+});
+
+function toggle(el){/* handled by click listener above */}
+
+update();
+</script>
+</body>
+</html>
